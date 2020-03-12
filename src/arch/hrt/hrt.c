@@ -331,7 +331,8 @@ int
 hvm_hrt_init (void)
 {
     HRT_DEBUG("Pinging the VMM with HRT init status\n");
-    hvm_hcall(0,0,0,0,0,0,0,0);
+    //hvm_hcall(0,0,0,0,0,0,0,0);
+    outl(0x00000000, 0x7C4);
 
     HRT_PRINT("Registering HRT upcall handler\n");
     if (register_int_handler(nautilus_info.sys.mb_info->hrt_info->hrt_int_vec,

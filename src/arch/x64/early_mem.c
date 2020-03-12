@@ -88,6 +88,8 @@ arch_detect_mem_map (mmap_info_t * mm_info,
         start = round_up(mmap->addr, PAGE_SIZE_4KB);
         end   = round_down(mmap->addr + mmap->len, PAGE_SIZE_4KB);
 
+        printk("start = 0x%llX end = 0x%llX\n", start, end);
+
         memory_map[n].addr = start;
         memory_map[n].len  = end-start;
         memory_map[n].type = mmap->type;

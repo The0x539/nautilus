@@ -255,6 +255,10 @@ hrt_bsp_init (unsigned long mbd,
 
     nk_msg_queue_init();
 
+    nk_sched_init(&sched_cfg);
+
+    nk_thread_group_init();
+    nk_group_sched_init();
     /* we now switch away from the boot-time stack in low memory */
     struct cpu * me = naut->sys.cpus[my_cpu_id()];
     smp_ap_stack_switch(get_cur_thread()->rsp, get_cur_thread()->rsp, me);

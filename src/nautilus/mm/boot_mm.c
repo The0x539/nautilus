@@ -182,6 +182,7 @@ mm_boot_init (ulong_t mbd)
     /* parse the multiboot2 memory map, filing in 
      * some global data that we will subsequently use here  */
     detect_mem_map(mbd);
+    // by this point, I believe nautilus knows the amount of RAM in the system
 
 
     npages = mm_info.last_pfn + 1;
@@ -326,6 +327,17 @@ __mm_boot_alloc (ulong_t size, ulong_t align, ulong_t goal)
     /* will almost always be 1 (note the GNU extension usage here...) */
     incr = (align >> PAGE_SHIFT) ? : 1;
 
+    nk_vc_putchar('@');
+    nk_vc_putchar(' ');
+    uint64_t pagemap_addr = (uint64_t)minfo->page_map;
+    for (int v = 15; v >= 0 ; v--) {
+        char *hex = "0123456789ABCDEF";
+        uint64_t addr_mask = 0xFL << 4*v;
+        uint64_t masked_addr = pagemap_addr & addr_mask;
+        uint64_t addr_nybble = masked_addr >> 4*v;
+        nk_vc_putchar(hex[addr_nybble]);
+    }
+    nk_vc_putchar('\n');
     for (i = preferred; i < eidx; i += incr) {
         ulong_t j;
         i = i + find_next_zero_bit(minfo->page_map, eidx+1, i);
