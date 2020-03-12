@@ -291,8 +291,6 @@ config VIRTUAL_CONSOLE_SERIAL_MIRROR_ALL
         (screen clears, display char, etc) are not
         currently mirrored.
 
-
-
   menu "Scheduler Options"
 
     config UTILIZATION_LIMIT
@@ -436,8 +434,6 @@ config VIRTUAL_CONSOLE_SERIAL_MIRROR_ALL
 	  which of these behaviors you want if you are executing tasks
 	  in idle loops.
 	  
-       
-	  
     config INTERRUPT_THREAD
        bool "Restrict interrupts to special real-time interrupt thread"
        default false
@@ -511,6 +507,86 @@ config VIRTUAL_CONSOLE_SERIAL_MIRROR_ALL
 
     endchoice
   endmenu
+
+  menu "Fiber Options"
+
+    config FIBER_ENABLE
+        bool "Enable fibers in the kernel"
+        default true
+	    help
+	      Enables fibers in the kernel. Each cpu has a thread that consumes fibers.
+	      The thread can run at an arbitrary aperiodic priority. Turns off stack
+              checking for threads because fibers change stacks.
+
+    config FIBER_THREAD_STACK_SIZE
+       depends on FIBER_ENABLE
+       int "Stack size for fiber threads"
+       default 2097152
+       help 
+          Controls the size of the stack for fiber threads.  The default here is 2 MB.
+ 
+    config FIBER_THREAD_PRIORITY
+       depends on FIBER_ENABLE
+       int "Aperiodic priority for fiber threads"
+       default 100000000
+       help 
+          Priority for the fiber threads.  The default here is
+	      the quantum in ns.   By adjusting this, you can adjust
+	      how much priority fibers effectively have in the system.
+
+    config FIBER_FSAVE
+       depends on FIBER_ENABLE && XSAVE_SUPPORT
+       bool "Save floating point state for fibers"
+       default true
+       help 
+         When enabled, will save the floating point state for fibers during context switches. 
+
+    choice 
+        prompt "Select Fiber Thread Idle Type"
+        depends on FIBER_ENABLE
+        default FIBER_ENABLE_WAIT
+
+        config FIBER_ENABLE_SPIN
+        bool "FIBER_THREAD_SPIN"
+        depends on FIBER_ENABLE
+        help
+            If enabled, the fiber thread will spin (yield continuously) 
+            even when no fibers are in the fiber queue.
+
+        config FIBER_ENABLE_SLEEP
+        bool "FIBER_THREAD_SLEEP"
+        depends on FIBER_ENABLE
+        help
+            If enabled, the fiber thread will sleep when no fibers are 
+            in the fiber queue. The fiber thread will be woken up when 
+            enough time elapses or a fiber is added to the fiber queue.
+        
+        config FIBER_ENABLE_WAIT
+        bool "FIBER_THREAD_WAIT"
+        depends on FIBER_ENABLE
+        help
+            If enabled, the fiber thread will wait on a wait queue when no 
+            fibers are in the fiber queue. The fiber thread will be woken up
+            when enough time elapses or a fiber is added to the fiber queue.
+
+    endchoice
+
+    config FIBER_THREAD_SLEEP_TIME
+         int "sleep time for fiber threads"
+         depends on ENABLE_SLEEP
+         default 100000000
+         help
+           The amount of time the fiber thread will sleep for when
+           there are no fibers on the fiber queue.
+
+    config TEST_FIBERS
+        bool "Enable fiber tests commands in the shell"
+        depends on FIBER_ENABLE
+        default false
+        help
+          This option will enable fiber test commands in the shell.
+
+  endmenu 
 
 config REAL_MODE_INTERFACE
    bool "Enable the Long->Real interface"
@@ -672,8 +748,45 @@ menu "Garbage Collection Options"
    help
       Adddes test suite for BDWGC, which can be run from the shell
 
- endmenu
+  endmenu
 
+    menu "FPU Options"
+
+    config XSAVE_SUPPORT
+      bool "Allow saving of FPRs with XSAVE instructions"
+      default true
+      help
+        Adds xsave instruction support to Nautilus. Processor
+        must have xsave support or this feature will be ignored.
+
+    config XSAVE_SSE_SUPPORT
+          bool "Enable saving of SSE registers with XSAVE"
+          default true
+          depends on XSAVE_SUPPORT
+          help
+            Will save SSE state with XSAVE when enabled. Required
+            in order to save AVX and AVX512f state. This will
+            be ignored if processor does not have SSE registers.
+
+    config XSAVE_AVX_SUPPORT
+              bool "Enable saving of AVX registers with XSAVE"
+              default true
+              depends on XSAVE_SUPPORT
+              help
+                Will save AVX state with XSAVE when enabled. Required
+                in order to save AVX512f state. This opt. will
+                be ignored if processor does not have AVX registers.
+
+    config XSAVE_AVX512F_SUPPORT
+                  bool "Enable saving of AVX512f registers with XSAVE"
+                  default true
+                  depends on XSAVE_SUPPORT
+                  help
+                    Will save AVX512f state with XSAVE when enabled. This
+                    opt will be ignored if processor does not 
+                    have avx512f registers.
+
+  endmenu 
 endmenu
 
 menu "Optimizations"
@@ -762,10 +875,13 @@ menu Debugging
     config ENABLE_STACK_CHECK
     bool "Enable Runtime Stack Overrun Checking"
     default n
+    depends on !FIBER_ENABLE
     help
       This checks the stack pointer on every thread switch to
       make sure that a thread hasn't overrun its allocated 
-      stack
+      stack.   Note that enabling fibers must disable
+      this debugging feature, since fibers context switch
+      stacks within a thread
 
    config ENABLE_REMOTE_DEBUGGING
     depends on !HVM_HRT
@@ -890,6 +1006,19 @@ menu Debugging
       help
         Turn on debug prints for threads
 
+    config DEBUG_FIBERS
+      bool "Debug Fibers"
+      depends on DEBUG_PRINTS && FIBER_ENABLE
+      default n
+      help
+        Turn on debug prints for fibers
+
+    config DEBUG_TASKS
+      bool "Debug Tasks"
+      depends on DEBUG_PRINTS
+      default n
+      help
+        Turn on debug prints for tasks
 
     config DEBUG_WAITQUEUES
       bool "Debug Wait Queues"
@@ -899,12 +1028,6 @@ menu Debugging
         Turn on debug prints for wait queues
 	YOU PROBABLY DO NOT WANT TO DO THIS - SEE COMMENTS
 
-config DEBUG_TASKS
-      bool "Debug Tasks"
-      depends on DEBUG_PRINTS
-      default n
-      help
-        Turn on debug prints for tasks
 
 config DEBUG_FUTURES
       bool "Debug Futures"

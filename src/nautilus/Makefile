@@ -55,7 +55,7 @@ obj-y += \
 	linker.o \
 	prog.o \
 	getopt.o \
-	cmdline.o 
+	cmdline.o
 
 obj-$(NAUT_CONFIG_PROFILE) += instrument.o
 obj-$(NAUT_CONFIG_XEON_PHI) += sfi.o
@@ -70,3 +70,4 @@ obj-$(NAUT_CONFIG_ENABLE_REMOTE_DEBUGGING) += gdb-stub.o
 
 obj-$(NAUT_CONFIG_CACHEPART) +=	cachepart.o
 
+obj-$(NAUT_CONFIG_FIBER_ENABLE) += fiber.o

@@ -3,7 +3,9 @@ obj-y += smpboot.o \
 		 thread_lowlevel.o \
 		 setjmp_low.o \
 		 timing_loops.o \
-		 string_lowlevel.o 
+		 string_lowlevel.o
+
+obj-$(NAUT_CONFIG_FIBER_ENABLE) += fiber_lowlevel.o
 
 ifdef NAUT_CONFIG_PALACIOS_EMBED_VM_IMG
 	obj-y += guest.o
