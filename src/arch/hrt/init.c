@@ -28,6 +28,7 @@
 #include <nautilus/idt.h>
 #include <nautilus/spinlock.h>
 #include <nautilus/mb_utils.h>
+#include <nautilus/mtrr.h>
 #include <nautilus/cpu.h>
 #include <nautilus/msr.h>
 #include <nautilus/cpuid.h>
@@ -53,6 +54,18 @@
 #include <nautilus/mm.h>
 #include <nautilus/libccompat.h>
 #include <nautilus/barrier.h>
+#include <nautilus/linker.h>
+#include <nautilus/loader.h>
+#include <nautilus/fs.h>
+#include <nautilus/dev.h>
+#include <nautilus/chardev.h>
+#include <nautilus/blkdev.h>
+#include <nautilus/netdev.h>
+#include <nautilus/pmc.h>
+#include <nautilus/prog.h>
+#include <nautilus/cmdline.h>
+#include <nautilus/shell.h>
+#include <test/test.h>
 #include <arch/hrt/hrt.h>
 
 #include <dev/apic.h>
@@ -68,7 +81,7 @@
 #endif
 
 
-extern struct cpu * smp_ap_stack_switch(uint64_t, uint64_t, struct cpu*);
+extern struct naut_info * smp_ap_stack_switch(uint64_t, uint64_t, struct naut_info*);
 extern spinlock_t printk_lock;
 
 static int hrt_core_sync = 0;
@@ -210,9 +223,18 @@ hrt_bsp_init (unsigned long mbd,
     
     spinlock_init(&printk_lock);
 
-    nk_vc_print(NAUT_WELCOME);
-
     setup_idt();
+
+    nk_int_init(&(naut->sys));
+
+    nk_mtrr_init();
+
+    nk_dev_init();
+    nk_char_dev_init();
+    nk_block_dev_init();
+    nk_net_dev_init();
+
+    nk_vc_print(NAUT_WELCOME);
 
     detect_cpu();
 
@@ -249,7 +271,6 @@ hrt_bsp_init (unsigned long mbd,
 
     apic_init(naut->sys.cpus[0]);
 
-
     nk_rand_init(naut->sys.cpus[0]);
 
     nk_semaphore_init();
@@ -260,10 +281,9 @@ hrt_bsp_init (unsigned long mbd,
 
     nk_thread_group_init();
     nk_group_sched_init();
+
     /* we now switch away from the boot-time stack in low memory */
-    struct cpu * me = naut->sys.cpus[my_cpu_id()];
-    smp_ap_stack_switch(get_cur_thread()->rsp, get_cur_thread()->rsp, me);
-    *(volatile struct naut_info**)&naut = &nautilus_info;
+    naut = smp_ap_stack_switch(get_cur_thread()->rsp, get_cur_thread()->rsp, naut);
 
     mm_boot_kmem_cleanup();
 
@@ -281,10 +301,26 @@ hrt_bsp_init (unsigned long mbd,
     nk_cxx_init();
 #endif 
 
-    nk_vc_init();
+    nk_sched_start();
 
     /* interrupts on */
     sti();
+
+    nk_vc_init();
+
+    nk_fs_init();
+
+    nk_linker_init(naut);
+    nk_prog_init(naut);
+    nk_loader_init();
+
+    nk_pmc_init(naut);
+
+    nk_cmdline_init(naut);
+    nk_test_init(naut);
+    nk_cmdline_dispatch(naut);
+
+    nk_launch_shell("root-shell",0,0,0);
 
     runtime_init();
 
