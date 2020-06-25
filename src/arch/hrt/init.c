@@ -65,6 +65,7 @@
 #include <nautilus/prog.h>
 #include <nautilus/cmdline.h>
 #include <nautilus/shell.h>
+#include <nautilus/delegator.h>
 #include <test/test.h>
 #include <arch/hrt/hrt.h>
 
@@ -320,6 +321,7 @@ hrt_bsp_init (unsigned long mbd,
     nk_test_init(naut);
     nk_cmdline_dispatch(naut);
 
+	test_delcall();
     nk_launch_shell("root-shell",0,0,0);
 
     runtime_init();
